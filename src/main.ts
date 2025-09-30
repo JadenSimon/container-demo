@@ -41,6 +41,9 @@ function startServer() {
 //
 // `synapse test --target aws` uses the implementation in `@cohesible/synapse-aws/s3`
 // Otherwise it uses `@cohesible/synapse-local`
+//
+// `synapse deploy` (and `test`) provisions resources as-needed. 
+// `bucket` won't fully materialize until deploytime but its handle still exists at comptime
 export const bucket = new Bucket()
 
 // We can adjust our container service based on the deployment target

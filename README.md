@@ -1,17 +1,30 @@
 # Synapse + Containers
+Infrastructure is code. Runtime and infra can reference each other.
 
-Infrastructure is code. I'm stiching together Docker with `express` and a local or cloud bucket.
+This repo stitches together Docker with `express` and a local or cloud bucket determined at comptime. Resources become concrete during deploytime, before then their state is deferred and cannot be evaluated in logic that requires a concrete value. But you can do a lot without needing to know the value.
 
-Everything is TypeScript. No Terraform HCL, no YAML.
+Here's the abridged version of the code:
 
-## What’s going on here
+```ts
+// everything in the top scope is "comptime", evaluated during compile
+const bucket = new Bucket() // this is a resource
 
-* Spins up an Express server in a container. Using code.
-* Glues a Bucket onto it, because everyone needs a Bucket sometimes.
-* Adds a health check so tests don’t explode on startup.
-* Runs locally with a fake bucket, or against real S3 if you flip a switch.
+function startServer() {
+    // runtime code because it's a leaf in the graph
+    const app = express()
+    app.get('/foo', (req, res) => {
+        return bucket.get('foo', 'utf-8')
+    })
+    app.listen(3000)
+}
 
-It’s functional duct tape that holds.
+const code = new Bundle(startServer) // resource
+const service = localContainerService(code) // resource
+```
+
+Comptime creates the plan for deploytime and deploytime creates the environment for runtime.
+
+Code is infrastructure.
 
 ## How to run
 
@@ -29,7 +42,9 @@ synapse test
 synapse destroy
 
 # real S3 bucket (using ~/.aws/credentials)
-synapse deploy --target aws
+synapse compile --target aws
+synapse deploy --dry-run # we have a "plan" for our infra after compile
+
 synapse test
 
 # show the deployment state for the symbol
@@ -39,7 +54,7 @@ synapse show bucket
 synapse repl src/main.ts
 > await bucket.get('foo', 'utf-8')
 
-# Pess ctrl+c twice to leave REPL or type .exit
+# ctrl+c twice to leave REPL, or type .exit
 
 # replace the bucket (for fun)
 synapse replace bucket
